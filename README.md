@@ -1,12 +1,16 @@
 # xlte
 
-Excel Text Extractor - Extract text from Excel (.xlsx) files
+Excel Text Extractor - Extract text from Excel (.xls, .xlsx, .xlsm) files
 
 ## Features
 
 - Extract text from all cells in Excel workbooks
 - Extract text from shapes (text boxes, etc.)
 - Support for multiple sheets
+- Support for multiple Excel formats:
+  - `.xls` (Excel 97-2003)
+  - `.xlsx` (Excel 2007+)
+  - `.xlsm` (Excel 2007+ with macros)
 - Command-line interface
 
 ## Requirements
