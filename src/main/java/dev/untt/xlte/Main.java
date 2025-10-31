@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 @Command(
     name = "xlte",
     version = "xlte 1.0.0",
-    description = "Extract text from Excel (.xlsx) files"
+    description = "Extract text from Excel (.xls, .xlsx, .xlsm) files"
 )
 public class Main implements Callable<Integer> {
 
@@ -112,8 +112,9 @@ public class Main implements Callable<Integer> {
                     return 1;
                 }
 
-                if (!file.getName().toLowerCase().endsWith(".xlsx")) {
-                    System.err.println("Error: Only .xlsx files are supported");
+                var fileName = file.getName().toLowerCase();
+                if (!fileName.endsWith(".xls") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xlsm")) {
+                    System.err.println("Error: Only .xls, .xlsx, and .xlsm files are supported");
                     return 1;
                 }
 
@@ -130,11 +131,11 @@ public class Main implements Callable<Integer> {
                     return 1;
                 }
 
-                // Find all .xlsx files in directory
+                // Find all Excel files in directory
                 filesToProcess.addAll(findExcelFiles(directory.toPath(), recursive));
 
                 if (filesToProcess.isEmpty()) {
-                    System.err.println("No .xlsx files found in directory: " + directory);
+                    System.err.println("No Excel files found in directory: " + directory);
                     return 1;
                 }
             }
@@ -160,7 +161,10 @@ public class Main implements Callable<Integer> {
 
         try (Stream<Path> paths = recursive ? Files.walk(directory) : Files.list(directory)) {
             paths.filter(Files::isRegularFile)
-                 .filter(p -> p.toString().toLowerCase().endsWith(".xlsx"))
+                 .filter(p -> {
+                     var name = p.toString().toLowerCase();
+                     return name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".xlsm");
+                 })
                  .sorted()
                  .forEach(p -> excelFiles.add(p.toFile()));
         }

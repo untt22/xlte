@@ -1,11 +1,12 @@
 package dev.untt.xlte;
 
+import org.apache.poi.hssf.usermodel.HSSFPatriarch;
+import org.apache.poi.hssf.usermodel.HSSFShape;
+import org.apache.poi.hssf.usermodel.HSSFSimpleShape;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFShape;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFSimpleShape;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,7 +49,7 @@ public class ExcelTextExtractor {
         }
 
         try (var fis = new FileInputStream(file);
-             var workbook = new XSSFWorkbook(fis)) {
+             var workbook = WorkbookFactory.create(fis)) {
 
             var numberOfSheets = workbook.getNumberOfSheets();
 
@@ -72,7 +73,7 @@ public class ExcelTextExtractor {
         return result.toString().trim();
     }
 
-    private String extractCellText(String filePath, String sheetName, XSSFSheet sheet) {
+    private String extractCellText(String filePath, String sheetName, Sheet sheet) {
         var text = new StringBuilder();
         var dataFormatter = new DataFormatter();
 
@@ -120,28 +121,31 @@ public class ExcelTextExtractor {
         return text.toString();
     }
 
-    private String extractShapeText(String filePath, String sheetName, XSSFSheet sheet) {
+    private String extractShapeText(String filePath, String sheetName, Sheet sheet) {
         var text = new StringBuilder();
 
         var drawing = sheet.getDrawingPatriarch();
         if (drawing != null) {
-            var shapes = drawing.getShapes();
-
-            for (var shape : shapes) {
-                if (shape instanceof XSSFSimpleShape simpleShape) {
-                    var shapeText = simpleShape.getText();
-
-                    if (shapeText != null && !shapeText.trim().isEmpty()) {
-                        if (outputMode == OutputMode.TERMINAL) {
-                            // Human-readable format: [Sheet:Shape] Content
-                            text.append("[").append(sheetName).append(":Shape] ")
-                                .append(shapeText.trim()).append("\n");
-                        } else {
-                            // TSV format: FilePath\tSheet\tShape\tContent
-                            text.append(filePath).append("\t")
-                                .append(sheetName).append("\t")
-                                .append("Shape").append("\t")
-                                .append(escapeText(shapeText.trim())).append("\n");
+            // Handle XSSF (xlsx/xlsm) shapes
+            if (drawing instanceof XSSFDrawing xssfDrawing) {
+                var shapes = xssfDrawing.getShapes();
+                for (var shape : shapes) {
+                    if (shape instanceof XSSFSimpleShape simpleShape) {
+                        var shapeText = simpleShape.getText();
+                        if (shapeText != null && !shapeText.trim().isEmpty()) {
+                            appendShapeText(text, filePath, sheetName, shapeText.trim());
+                        }
+                    }
+                }
+            }
+            // Handle HSSF (xls) shapes
+            else if (drawing instanceof HSSFPatriarch hssfPatriarch) {
+                var shapes = hssfPatriarch.getChildren();
+                for (var shape : shapes) {
+                    if (shape instanceof HSSFSimpleShape simpleShape) {
+                        var shapeText = simpleShape.getString();
+                        if (shapeText != null && !shapeText.getString().trim().isEmpty()) {
+                            appendShapeText(text, filePath, sheetName, shapeText.getString().trim());
                         }
                     }
                 }
@@ -149,5 +153,19 @@ public class ExcelTextExtractor {
         }
 
         return text.toString();
+    }
+
+    private void appendShapeText(StringBuilder text, String filePath, String sheetName, String shapeText) {
+        if (outputMode == OutputMode.TERMINAL) {
+            // Human-readable format: [Sheet:Shape] Content
+            text.append("[").append(sheetName).append(":Shape] ")
+                .append(shapeText).append("\n");
+        } else {
+            // TSV format: FilePath\tSheet\tShape\tContent
+            text.append(filePath).append("\t")
+                .append(sheetName).append("\t")
+                .append("Shape").append("\t")
+                .append(escapeText(shapeText)).append("\n");
+        }
     }
 }
