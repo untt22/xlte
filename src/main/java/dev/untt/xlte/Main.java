@@ -7,6 +7,8 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -63,6 +65,13 @@ public class Main implements Callable<Integer> {
     private boolean versionRequested;
 
     public static void main(String[] args) {
+        // Set UTF-8 encoding for stdout to ensure proper output encoding
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            // If setting encoding fails, continue with default
+        }
+
         var exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
     }
