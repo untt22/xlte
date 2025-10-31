@@ -143,9 +143,14 @@ public class ExcelTextExtractor {
                 var shapes = hssfPatriarch.getChildren();
                 for (var shape : shapes) {
                     if (shape instanceof HSSFSimpleShape simpleShape) {
-                        var shapeText = simpleShape.getString();
-                        if (shapeText != null && !shapeText.getString().trim().isEmpty()) {
-                            appendShapeText(text, filePath, sheetName, shapeText.getString().trim());
+                        try {
+                            var shapeText = simpleShape.getString();
+                            if (shapeText != null && !shapeText.getString().trim().isEmpty()) {
+                                appendShapeText(text, filePath, sheetName, shapeText.getString().trim());
+                            }
+                        } catch (NullPointerException e) {
+                            // Skip shapes with null txtObjectRecord
+                            // This can happen with certain types of shapes in .xls files
                         }
                     }
                 }
