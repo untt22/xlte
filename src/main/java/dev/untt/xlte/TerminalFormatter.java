@@ -1,14 +1,18 @@
 package dev.untt.xlte;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Formats extracted items in a human-readable format for terminal output.
  * Format: [SheetName:CellAddress] Content
  * Shows file headers when processing items from the same file.
+ *
+ * This formatter is stateless and thread-safe.
  */
 public class TerminalFormatter implements OutputFormatter {
-    private String lastFilePath = null;
 
     @Override
     public String format(List<ExtractedItem> items) {
@@ -16,42 +20,50 @@ public class TerminalFormatter implements OutputFormatter {
             return "";
         }
 
-        var result = new StringBuilder();
+        // Group items by file path (preserving order)
+        Map<String, List<ExtractedItem>> groupedByFile = items.stream()
+            .collect(Collectors.groupingBy(
+                ExtractedItem::filePath,
+                LinkedHashMap::new,  // Preserve insertion order
+                Collectors.toList()
+            ));
 
-        // Format each item
-        for (var item : items) {
-            var filePath = item.filePath();
+        // Format each file group
+        return groupedByFile.entrySet().stream()
+            .map(entry -> formatFileGroup(entry.getKey(), entry.getValue()))
+            .collect(Collectors.joining("\n"));
+    }
 
-            // Add file header if this is a different file from the last one
-            if (!filePath.equals(lastFilePath)) {
-                if (lastFilePath != null) {
-                    // Add blank line between files (but not before the first file)
-                    result.append("\n");
-                }
-                result.append("=== ").append(filePath).append(" ===\n");
-                lastFilePath = filePath;
-            }
+    /**
+     * Formats a group of items from the same file.
+     * Pure function with no side effects.
+     */
+    private String formatFileGroup(String filePath, List<ExtractedItem> items) {
+        var header = "=== " + filePath + " ===\n";
+        var itemsFormatted = items.stream()
+            .map(this::formatItem)
+            .collect(Collectors.joining());
 
-            switch (item) {
-                case CellItem cell -> {
-                    result.append("[");
-                    result.append(cell.sheetName());
-                    result.append(":");
-                    result.append(cell.cellAddress());
-                    result.append("] ");
-                    result.append(escapeText(cell.content()));
-                    result.append("\n");
-                }
-                case ShapeItem shape -> {
-                    result.append("[");
-                    result.append(shape.sheetName());
-                    result.append(":Shape] ");
-                    result.append(escapeText(shape.content()));
-                    result.append("\n");
-                }
-            }
-        }
+        return header + itemsFormatted;
+    }
 
-        return result.toString();
+    /**
+     * Formats a single item.
+     * Pure function with no side effects.
+     */
+    private String formatItem(ExtractedItem item) {
+        return switch (item) {
+            case CellItem cell -> String.format(
+                "[%s:%s] %s\n",
+                cell.sheetName(),
+                cell.cellAddress(),
+                escapeText(cell.content())
+            );
+            case ShapeItem shape -> String.format(
+                "[%s:Shape] %s\n",
+                shape.sheetName(),
+                escapeText(shape.content())
+            );
+        };
     }
 }
