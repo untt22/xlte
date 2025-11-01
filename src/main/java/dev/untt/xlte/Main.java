@@ -45,12 +45,6 @@ public class Main implements Callable<Integer> {
     private boolean recursive;
 
     @Option(
-        names = {"-q", "--quiet"},
-        description = "Suppress file headers when processing multiple files"
-    )
-    private boolean quiet;
-
-    @Option(
         names = {"-h", "--help"},
         usageHelp = true,
         description = "Show this help message and exit"
@@ -93,11 +87,13 @@ public class Main implements Callable<Integer> {
         try {
             // Detect output mode: terminal vs redirected/piped
             var isTerminal = System.console() != null;
-            var outputMode = isTerminal ?
-                ExcelTextExtractor.OutputMode.TERMINAL :
-                ExcelTextExtractor.OutputMode.TSV;
 
-            var extractor = new ExcelTextExtractor(outputMode);
+            // Create appropriate formatter based on output destination
+            OutputFormatter formatter = isTerminal ?
+                new TerminalFormatter() :
+                new TsvFormatter();
+
+            var extractor = new ExcelTextExtractor();
             var filesToProcess = new ArrayList<File>();
 
             if (file != null) {
@@ -141,9 +137,8 @@ public class Main implements Callable<Integer> {
             }
 
             // Process all files
-            var showFileName = !quiet && filesToProcess.size() > 1;
             for (var excelFile : filesToProcess) {
-                processFile(extractor, excelFile, showFileName);
+                processFile(extractor, formatter, excelFile);
             }
 
             return 0;
@@ -172,11 +167,12 @@ public class Main implements Callable<Integer> {
         return excelFiles;
     }
 
-    private void processFile(ExcelTextExtractor extractor, File file, boolean showFileName) {
+    private void processFile(ExcelTextExtractor extractor, OutputFormatter formatter, File file) {
         try {
-            var text = extractor.extractText(file);
-            if (!text.isEmpty()) {
-                System.out.println(text);
+            var items = extractor.extract(file);
+            var output = formatter.format(items);
+            if (!output.isEmpty()) {
+                System.out.print(output);
             }
         } catch (Exception e) {
             System.err.println("Error processing file " + file.getPath() + ": " + e.getMessage());
