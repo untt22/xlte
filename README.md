@@ -153,9 +153,10 @@ java -jar target/xlte-1.0.0.jar -d ./data > output.tsv
 
 ## Java 25 Features Used
 
-This project takes advantage of the latest Java 25 features:
+This project takes advantage of the latest Java features:
 
+- **Records**: Immutable data carriers for `CellItem` and `ShapeItem`
+- **Sealed interfaces**: `ExtractedItem` sealed interface restricts permitted implementations
+- **Pattern matching for switch**: Type patterns in switch expressions for formatter implementations
 - **var keyword**: Local variable type inference for cleaner code
-- **Pattern matching for instanceof**: Simplified type checking and casting
-- **Switch expressions**: More concise and expressive switch statements with yield
 - **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
