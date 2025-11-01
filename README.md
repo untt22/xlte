@@ -159,3 +159,5 @@ This project takes advantage of the latest Java 25 features:
 - **Pattern matching for instanceof**: Simplified type checking and casting
 - **Switch expressions**: More concise and expressive switch statements with yield
 - **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
+
+---
