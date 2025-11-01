@@ -1,10 +1,13 @@
 package dev.untt.xlte;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Formats extracted items as Tab-Separated Values (TSV) for piping/redirection.
  * Format: FilePath\tSheetName\tCellAddress\tContent
+ *
+ * This formatter is stateless and uses functional stream operations.
  */
 public class TsvFormatter implements OutputFormatter {
 
@@ -14,34 +17,30 @@ public class TsvFormatter implements OutputFormatter {
             return "";
         }
 
-        var result = new StringBuilder();
+        return items.stream()
+            .map(this::formatItemAsTsv)
+            .collect(Collectors.joining());
+    }
 
-        // Format each item as TSV (always includes file path)
-        for (var item : items) {
-            switch (item) {
-                case CellItem cell -> {
-                    result.append(cell.filePath());
-                    result.append("\t");
-                    result.append(cell.sheetName());
-                    result.append("\t");
-                    result.append(cell.cellAddress());
-                    result.append("\t");
-                    result.append(escapeText(cell.content()));
-                    result.append("\n");
-                }
-                case ShapeItem shape -> {
-                    result.append(shape.filePath());
-                    result.append("\t");
-                    result.append(shape.sheetName());
-                    result.append("\t");
-                    result.append("Shape");
-                    result.append("\t");
-                    result.append(escapeText(shape.content()));
-                    result.append("\n");
-                }
-            }
-        }
+    /**
+     * Formats a single item as a TSV line.
+     * Pure function with no side effects.
+     */
+    private String formatItemAsTsv(ExtractedItem item) {
+        return switch (item) {
+            case CellItem cell -> String.join("\t",
+                cell.filePath(),
+                cell.sheetName(),
+                cell.cellAddress(),
+                escapeText(cell.content())
+            ) + "\n";
 
-        return result.toString();
+            case ShapeItem shape -> String.join("\t",
+                shape.filePath(),
+                shape.sheetName(),
+                "Shape",
+                escapeText(shape.content())
+            ) + "\n";
+        };
     }
 }

@@ -2,7 +2,6 @@ package dev.untt.xlte;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Option;
 
 import java.io.File;
@@ -11,10 +10,10 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.concurrent.Callable;
 
 @Command(
     name = "xlte",
@@ -72,110 +71,191 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        // Validate that exactly one of -f or -d is specified
+        var result = validateInput()
+            .flatMap(this::resolveFiles)
+            .map(this::processAllFilesAndGetExitCode);
+
+        result.ifFailure(System.err::println);
+        return result.orElse(1);
+    }
+
+    /**
+     * Validates that exactly one of --file or --dir is specified.
+     * Pure function with no side effects.
+     */
+    private Result<InputMode> validateInput() {
         if (file == null && directory == null) {
-            System.err.println("Error: Either --file or --dir must be specified");
-            System.err.println("Use --help for usage information");
-            return 1;
+            return new Result.Failure<>(
+                "Error: Either --file or --dir must be specified\nUse --help for usage information"
+            );
         }
 
         if (file != null && directory != null) {
-            System.err.println("Error: Cannot specify both --file and --dir");
-            return 1;
+            return new Result.Failure<>(
+                "Error: Cannot specify both --file and --dir"
+            );
         }
 
+        InputMode mode = file != null
+            ? new InputMode.SingleFile(file)
+            : new InputMode.Directory(directory, recursive);
+
+        return new Result.Success<>(mode);
+    }
+
+    /**
+     * Resolves the input mode to a list of files to process.
+     * Pure function except for file system access.
+     */
+    private Result<List<File>> resolveFiles(InputMode mode) {
+        return switch (mode) {
+            case InputMode.SingleFile(var f) -> validateFile(f).map(List::of);
+            case InputMode.Directory(var dir, var recursive) ->
+                validateDirectory(dir).flatMap(d -> findExcelFilesResult(d.toPath(), recursive));
+        };
+    }
+
+    /**
+     * Validates a single file.
+     * Pure function except for file system access.
+     */
+    private Result<File> validateFile(File file) {
+        return checkFileExists(file)
+            .flatMap(this::checkIsRegularFile)
+            .flatMap(this::checkHasExcelExtension);
+    }
+
+    private Result<File> checkFileExists(File file) {
+        return file.exists()
+            ? new Result.Success<>(file)
+            : new Result.Failure<>("Error: File not found: " + file);
+    }
+
+    private Result<File> checkIsRegularFile(File file) {
+        return file.isFile()
+            ? new Result.Success<>(file)
+            : new Result.Failure<>("Error: Not a file: " + file);
+    }
+
+    private Result<File> checkHasExcelExtension(File file) {
+        var name = file.getName().toLowerCase();
+        boolean isExcel = name.endsWith(".xls") ||
+                         name.endsWith(".xlsx") ||
+                         name.endsWith(".xlsm");
+        return isExcel
+            ? new Result.Success<>(file)
+            : new Result.Failure<>("Error: Only .xls, .xlsx, and .xlsm files are supported");
+    }
+
+    /**
+     * Validates a directory.
+     * Pure function except for file system access.
+     */
+    private Result<File> validateDirectory(File dir) {
+        if (!dir.exists()) {
+            return new Result.Failure<>("Error: Directory not found: " + dir);
+        }
+        if (!dir.isDirectory()) {
+            return new Result.Failure<>("Error: Not a directory: " + dir);
+        }
+        return new Result.Success<>(dir);
+    }
+
+    /**
+     * Finds Excel files in a directory and wraps the result in a Result type.
+     */
+    private Result<List<File>> findExcelFilesResult(Path directory, boolean recursive) {
         try {
-            // Detect output mode: terminal vs redirected/piped
-            var isTerminal = System.console() != null;
-
-            // Create appropriate formatter based on output destination
-            OutputFormatter formatter = isTerminal ?
-                new TerminalFormatter() :
-                new TsvFormatter();
-
-            var extractor = new ExcelTextExtractor();
-            var filesToProcess = new ArrayList<File>();
-
-            if (file != null) {
-                // Single file mode
-                if (!file.exists()) {
-                    System.err.println("Error: File not found: " + file);
-                    return 1;
-                }
-
-                if (!file.isFile()) {
-                    System.err.println("Error: Not a file: " + file);
-                    return 1;
-                }
-
-                var fileName = file.getName().toLowerCase();
-                if (!fileName.endsWith(".xls") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xlsm")) {
-                    System.err.println("Error: Only .xls, .xlsx, and .xlsm files are supported");
-                    return 1;
-                }
-
-                filesToProcess.add(file);
-            } else {
-                // Directory mode
-                if (!directory.exists()) {
-                    System.err.println("Error: Directory not found: " + directory);
-                    return 1;
-                }
-
-                if (!directory.isDirectory()) {
-                    System.err.println("Error: Not a directory: " + directory);
-                    return 1;
-                }
-
-                // Find all Excel files in directory
-                filesToProcess.addAll(findExcelFiles(directory.toPath(), recursive));
-
-                if (filesToProcess.isEmpty()) {
-                    System.err.println("No Excel files found in directory: " + directory);
-                    return 1;
-                }
+            var files = findExcelFiles(directory, recursive);
+            if (files.isEmpty()) {
+                return new Result.Failure<>("No Excel files found in directory: " + directory);
             }
-
-            // Process all files
-            for (var excelFile : filesToProcess) {
-                processFile(extractor, formatter, excelFile);
-            }
-
-            return 0;
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            if (System.getenv("DEBUG") != null) {
-                e.printStackTrace();
-            }
-            return 1;
+            return new Result.Success<>(files);
+        } catch (IOException e) {
+            return new Result.Failure<>("Error reading directory: " + e.getMessage());
         }
     }
 
+    /**
+     * Finds all Excel files in a directory.
+     * Functional implementation using Stream.collect().
+     */
     private List<File> findExcelFiles(Path directory, boolean recursive) throws IOException {
-        var excelFiles = new ArrayList<File>();
-
         try (Stream<Path> paths = recursive ? Files.walk(directory) : Files.list(directory)) {
-            paths.filter(Files::isRegularFile)
-                 .filter(p -> {
-                     var name = p.toString().toLowerCase();
-                     return name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".xlsm");
-                 })
-                 .sorted()
-                 .forEach(p -> excelFiles.add(p.toFile()));
+            return paths
+                .filter(Files::isRegularFile)
+                .filter(this::isExcelFile)
+                .sorted()
+                .map(Path::toFile)
+                .collect(Collectors.toUnmodifiableList());
         }
-
-        return excelFiles;
     }
 
-    private void processFile(ExcelTextExtractor extractor, OutputFormatter formatter, File file) {
+    /**
+     * Checks if a path represents an Excel file.
+     * Pure function.
+     */
+    private boolean isExcelFile(Path path) {
+        var name = path.toString().toLowerCase();
+        return name.endsWith(".xls") ||
+               name.endsWith(".xlsx") ||
+               name.endsWith(".xlsm");
+    }
+
+    /**
+     * Processes all files and returns exit code.
+     * This is where side effects (printing output) occur.
+     */
+    private int processAllFilesAndGetExitCode(List<File> files) {
+        var formatter = createFormatter();
+        var fileProcessor = new FileProcessor();
+
+        // Process files and collect results
+        files.stream()
+            .map(file -> processFile(fileProcessor, formatter, file))
+            .forEach(this::handleResult);
+
+        return 0;
+    }
+
+    /**
+     * Creates the appropriate formatter based on output destination.
+     */
+    private OutputFormatter createFormatter() {
+        var isTerminal = System.console() != null;
+        return isTerminal ? new TerminalFormatter() : new TsvFormatter();
+    }
+
+    /**
+     * Processes a single file and returns the result.
+     * Pure function except for file I/O.
+     */
+    private Result<String> processFile(FileProcessor fileProcessor, OutputFormatter formatter, File file) {
         try {
-            var items = extractor.extract(file);
+            var items = fileProcessor.processFile(file);
             var output = formatter.format(items);
-            if (!output.isEmpty()) {
-                System.out.print(output);
-            }
+            return new Result.Success<>(output);
         } catch (Exception e) {
-            System.err.println("Error processing file " + file.getPath() + ": " + e.getMessage());
+            return new Result.Failure<>(
+                "Error processing file " + file.getPath() + ": " + e.getMessage()
+            );
+        }
+    }
+
+    /**
+     * Handles the result of processing a file.
+     * This is where side effects (printing) occur.
+     */
+    private void handleResult(Result<String> result) {
+        switch (result) {
+            case Result.Success<String> success -> {
+                if (!success.value().isEmpty()) {
+                    System.out.print(success.value());
+                }
+            }
+            case Result.Failure<String> failure -> {
+                System.err.println(failure.error());
+            }
         }
     }
 }

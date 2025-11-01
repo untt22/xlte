@@ -2,7 +2,11 @@
 
 Excel Text Extractor - Extract text from Excel (.xls, .xlsx, .xlsm) files
 
-## Features
+---
+
+## For Users
+
+### Features
 
 - Extract text from all cells in Excel workbooks
 - Extract text from shapes (text boxes, etc.)
@@ -12,19 +16,7 @@ Excel Text Extractor - Extract text from Excel (.xls, .xlsx, .xlsm) files
   - `.xlsx` (Excel 2007+)
   - `.xlsm` (Excel 2007+ with macros)
 - Command-line interface
-
-## Requirements
-
-- Java 25 or higher
-- Maven 3.6 or higher
-
-## Build
-
-```bash
-mvn clean package
-```
-
-This will create an executable JAR file with all dependencies in `target/xlte-1.0.0.jar`
+- Auto-detection of output format (human-readable vs machine-readable)
 
 ## Usage
 
@@ -140,17 +132,34 @@ java -jar target/xlte-1.0.0.jar -d ./data > output.tsv
 # Open output.tsv in Excel or other spreadsheet software
 ```
 
-## Dependencies
+---
+
+## For Developers
+
+### Requirements
+
+- Java 25 or higher
+- Maven 3.6 or higher
+
+### Build
+
+```bash
+mvn clean package
+```
+
+This will create an executable JAR file with all dependencies in `target/xlte-1.0.0.jar`
+
+### Dependencies
 
 - Apache POI 5.4.1 - For Excel file processing
 - picocli 4.7.7 - For command-line interface
 
-## Java 25 Features Used
+### Architecture
 
-This project takes advantage of the latest Java features:
+For technical details about the architecture, design decisions, and implementation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-- **Records**: Immutable data carriers for `CellItem` and `ShapeItem`
-- **Sealed interfaces**: `ExtractedItem` sealed interface restricts permitted implementations
-- **Pattern matching for switch**: Type patterns in switch expressions for formatter implementations
-- **var keyword**: Local variable type inference for cleaner code
-- **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
+---
+
+## License
+
+This project is provided as-is for text extraction from Excel files.
