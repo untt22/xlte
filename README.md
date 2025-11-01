@@ -145,12 +145,43 @@ java -jar target/xlte-1.0.0.jar -d ./data > output.tsv
 - Apache POI 5.4.1 - For Excel file processing
 - picocli 4.7.7 - For command-line interface
 
+## Architecture
+
+The project follows a functional programming approach with clear separation of concerns:
+
+### Three-Layer Architecture
+
+1. **File I/O Layer** (`FileProcessor`)
+   - Handles file system operations
+   - Manages resource lifecycle (try-with-resources)
+   - Delegates to WorkbookExtractor
+
+2. **Workbook Processing Layer** (`WorkbookExtractor`)
+   - Processes POI Workbook objects
+   - Testable without file I/O
+   - Delegates sheet processing to SheetExtractor
+
+3. **Sheet Extraction Layer** (`SheetExtractor`)
+   - Pure POI logic for extracting cells and shapes
+   - Uses Stream API for functional data processing
+   - No side effects or external dependencies
+
+### Functional Programming Features
+
+- **Pure Functions**: Most methods have no side effects and are referentially transparent
+- **Immutability**: Records and immutable collections throughout
+- **Stream API**: Declarative data processing with `map()`, `flatMap()`, `filter()`, `collect()`
+- **Result Monad**: Type-safe error handling without exceptions (see `Result.java`)
+- **Sealed Interfaces**: Type-safe discriminated unions for domain models
+- **Stateless Components**: Thread-safe formatters with no mutable state
+
 ## Java 25 Features Used
 
 This project takes advantage of the latest Java features:
 
-- **Records**: Immutable data carriers for `CellItem` and `ShapeItem`
-- **Sealed interfaces**: `ExtractedItem` sealed interface restricts permitted implementations
-- **Pattern matching for switch**: Type patterns in switch expressions for formatter implementations
+- **Records**: Immutable data carriers for `CellItem`, `ShapeItem`, `InputMode`, `Result.Success`, `Result.Failure`
+- **Sealed interfaces**: `ExtractedItem`, `InputMode`, and `Result` sealed interfaces restrict permitted implementations
+- **Pattern matching for switch**: Type patterns in switch expressions throughout
 - **var keyword**: Local variable type inference for cleaner code
-- **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
+- **Stream API**: Functional data processing with streams
+- **try-with-resources**: Automatic resource management
