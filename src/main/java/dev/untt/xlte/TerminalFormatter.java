@@ -17,20 +17,21 @@ public class TerminalFormatter implements OutputFormatter {
         }
 
         var result = new StringBuilder();
-        var filePath = items.get(0).filePath();
-
-        // Add file header if this is a different file from the last one
-        if (!filePath.equals(lastFilePath)) {
-            if (lastFilePath != null) {
-                // Add blank line between files (but not before the first file)
-                result.append("\n");
-            }
-            result.append("=== ").append(filePath).append(" ===\n");
-            lastFilePath = filePath;
-        }
 
         // Format each item
         for (var item : items) {
+            var filePath = item.filePath();
+
+            // Add file header if this is a different file from the last one
+            if (!filePath.equals(lastFilePath)) {
+                if (lastFilePath != null) {
+                    // Add blank line between files (but not before the first file)
+                    result.append("\n");
+                }
+                result.append("=== ").append(filePath).append(" ===\n");
+                lastFilePath = filePath;
+            }
+
             switch (item) {
                 case CellItem cell -> {
                     result.append("[");
