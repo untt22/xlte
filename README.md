@@ -161,3 +161,4 @@ This project takes advantage of the latest Java 25 features:
 - **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
 
 ---
+---
