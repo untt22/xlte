@@ -37,7 +37,6 @@ java -jar target/xlte-1.0.0.jar [OPTIONS]
 - `-f, --file FILE` - Path to an Excel file to process
 - `-d, --dir DIRECTORY` - Path to a directory containing Excel files
 - `-r, --recursive` - Recursively process directories (default: true)
-- `-q, --quiet` - Suppress file headers when processing multiple files
 - `-h, --help` - Show help message and exit
 - `-v, --version` - Print version information and exit
 
@@ -62,11 +61,6 @@ java -jar target/xlte-1.0.0.jar -d ./samples
 **Process only files in the specified directory (non-recursive):**
 ```bash
 java -jar target/xlte-1.0.0.jar --dir ./samples --recursive=false
-```
-
-**Process multiple files without file headers:**
-```bash
-java -jar target/xlte-1.0.0.jar --dir ./samples --quiet
 ```
 
 **Show help:**
@@ -153,9 +147,10 @@ java -jar target/xlte-1.0.0.jar -d ./data > output.tsv
 
 ## Java 25 Features Used
 
-This project takes advantage of the latest Java 25 features:
+This project takes advantage of the latest Java features:
 
+- **Records**: Immutable data carriers for `CellItem` and `ShapeItem`
+- **Sealed interfaces**: `ExtractedItem` sealed interface restricts permitted implementations
+- **Pattern matching for switch**: Type patterns in switch expressions for formatter implementations
 - **var keyword**: Local variable type inference for cleaner code
-- **Pattern matching for instanceof**: Simplified type checking and casting
-- **Switch expressions**: More concise and expressive switch statements with yield
 - **Enhanced List methods**: Using `getLast()` and `removeLast()` for better performance
