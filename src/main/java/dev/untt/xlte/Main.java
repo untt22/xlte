@@ -93,7 +93,7 @@ public class Main implements Callable<Integer> {
                 new TerminalFormatter() :
                 new TsvFormatter();
 
-            var extractor = new ExcelTextExtractor();
+            var fileProcessor = new FileProcessor();
             var filesToProcess = new ArrayList<File>();
 
             if (file != null) {
@@ -138,7 +138,7 @@ public class Main implements Callable<Integer> {
 
             // Process all files
             for (var excelFile : filesToProcess) {
-                processFile(extractor, formatter, excelFile);
+                processFile(fileProcessor, formatter, excelFile);
             }
 
             return 0;
@@ -167,9 +167,9 @@ public class Main implements Callable<Integer> {
         return excelFiles;
     }
 
-    private void processFile(ExcelTextExtractor extractor, OutputFormatter formatter, File file) {
+    private void processFile(FileProcessor fileProcessor, OutputFormatter formatter, File file) {
         try {
-            var items = extractor.extract(file);
+            var items = fileProcessor.processFile(file);
             var output = formatter.format(items);
             if (!output.isEmpty()) {
                 System.out.print(output);
