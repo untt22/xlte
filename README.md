@@ -4,7 +4,7 @@ Excel Text Extractor - Extract text from Excel (.xls, .xlsx, .xlsm) files
 
 ---
 
-## For Users
+## Usage
 
 ### Features
 
@@ -18,7 +18,7 @@ Excel Text Extractor - Extract text from Excel (.xls, .xlsx, .xlsm) files
 - Command-line interface
 - Auto-detection of output format (human-readable vs machine-readable)
 
-## Usage
+### Basic Usage
 
 ```bash
 java -jar target/xlte-1.0.0.jar [OPTIONS]
@@ -134,7 +134,7 @@ java -jar target/xlte-1.0.0.jar -d ./data > output.tsv
 
 ---
 
-## For Developers
+## Development
 
 ### Requirements
 
@@ -162,4 +162,4 @@ For technical details about the architecture, design decisions, and implementati
 
 ## License
 
-This project is provided as-is for text extraction from Excel files.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
