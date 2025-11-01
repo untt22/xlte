@@ -1,11 +1,9 @@
 package dev.untt.xlte;
 
 import org.apache.poi.hssf.usermodel.HSSFPatriarch;
-import org.apache.poi.hssf.usermodel.HSSFShape;
 import org.apache.poi.hssf.usermodel.HSSFSimpleShape;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
-import org.apache.poi.xssf.usermodel.XSSFShape;
 import org.apache.poi.xssf.usermodel.XSSFSimpleShape;
 
 import java.io.File;
@@ -14,39 +12,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Extracts text content from Excel files (.xls, .xlsx, .xlsm).
+ * This class is responsible for extraction only, not formatting.
+ */
 public class ExcelTextExtractor {
 
-    public enum OutputMode {
-        TERMINAL,  // Human-readable format for terminal
-        TSV        // Tab-separated values for redirection/piping
-    }
-
-    private final OutputMode outputMode;
-
-    public ExcelTextExtractor(OutputMode outputMode) {
-        this.outputMode = outputMode;
-    }
-
     /**
-     * Escape newlines for text output (one cell per line format)
+     * Extracts all text content from an Excel file.
+     *
+     * @param file The Excel file to extract from
+     * @return A list of extracted items (cells and shapes)
+     * @throws IOException If the file cannot be read
      */
-    private String escapeText(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replace("\r\n", "\\n")
-                   .replace("\n", "\\n")
-                   .replace("\r", "\\n");
-    }
-
-    public String extractText(File file) throws IOException {
-        var result = new StringBuilder();
+    public List<ExtractedItem> extract(File file) throws IOException {
+        var items = new ArrayList<ExtractedItem>();
         var filePath = file.getPath();
-
-        // Terminal mode: add file header
-        if (outputMode == OutputMode.TERMINAL) {
-            result.append("=== ").append(filePath).append(" ===\n");
-        }
 
         try (var fis = new FileInputStream(file);
              var workbook = WorkbookFactory.create(fis)) {
@@ -58,23 +39,21 @@ public class ExcelTextExtractor {
                 var sheetName = sheet.getSheetName();
 
                 // Extract text from cells
-                result.append(extractCellText(filePath, sheetName, sheet));
+                items.addAll(extractCells(filePath, sheetName, sheet));
 
                 // Extract text from shapes
-                result.append(extractShapeText(filePath, sheetName, sheet));
+                items.addAll(extractShapes(filePath, sheetName, sheet));
             }
         }
 
-        // Terminal mode: add blank line after file
-        if (outputMode == OutputMode.TERMINAL && !result.toString().trim().isEmpty()) {
-            result.append("\n");
-        }
-
-        return result.toString().trim();
+        return items;
     }
 
-    private String extractCellText(String filePath, String sheetName, Sheet sheet) {
-        var text = new StringBuilder();
+    /**
+     * Extracts all non-empty cells from a sheet.
+     */
+    private List<ExtractedItem> extractCells(String filePath, String sheetName, Sheet sheet) {
+        var items = new ArrayList<ExtractedItem>();
         var dataFormatter = new DataFormatter();
 
         for (var row : sheet) {
@@ -98,31 +77,22 @@ public class ExcelTextExtractor {
                     default -> "";
                 };
 
-                // Output non-empty cells only
+                // Only add non-empty cells
                 if (!cellValue.trim().isEmpty()) {
                     var cellAddress = cell.getAddress().formatAsString();
-
-                    if (outputMode == OutputMode.TERMINAL) {
-                        // Human-readable format: [Sheet:Cell] Content
-                        text.append("[").append(sheetName).append(":")
-                            .append(cellAddress).append("] ")
-                            .append(cellValue).append("\n");
-                    } else {
-                        // TSV format: FilePath\tSheet\tCell\tContent
-                        text.append(filePath).append("\t")
-                            .append(sheetName).append("\t")
-                            .append(cellAddress).append("\t")
-                            .append(escapeText(cellValue)).append("\n");
-                    }
+                    items.add(new CellItem(filePath, sheetName, cellAddress, cellValue));
                 }
             }
         }
 
-        return text.toString();
+        return items;
     }
 
-    private String extractShapeText(String filePath, String sheetName, Sheet sheet) {
-        var text = new StringBuilder();
+    /**
+     * Extracts all text from shapes (text boxes, etc.) in a sheet.
+     */
+    private List<ExtractedItem> extractShapes(String filePath, String sheetName, Sheet sheet) {
+        var items = new ArrayList<ExtractedItem>();
 
         var drawing = sheet.getDrawingPatriarch();
         if (drawing != null) {
@@ -133,7 +103,7 @@ public class ExcelTextExtractor {
                     if (shape instanceof XSSFSimpleShape simpleShape) {
                         var shapeText = simpleShape.getText();
                         if (shapeText != null && !shapeText.trim().isEmpty()) {
-                            appendShapeText(text, filePath, sheetName, shapeText.trim());
+                            items.add(new ShapeItem(filePath, sheetName, shapeText.trim()));
                         }
                     }
                 }
@@ -143,29 +113,20 @@ public class ExcelTextExtractor {
                 var shapes = hssfPatriarch.getChildren();
                 for (var shape : shapes) {
                     if (shape instanceof HSSFSimpleShape simpleShape) {
-                        var shapeText = simpleShape.getString();
-                        if (shapeText != null && !shapeText.getString().trim().isEmpty()) {
-                            appendShapeText(text, filePath, sheetName, shapeText.getString().trim());
+                        try {
+                            var shapeText = simpleShape.getString();
+                            if (shapeText != null && !shapeText.getString().trim().isEmpty()) {
+                                items.add(new ShapeItem(filePath, sheetName, shapeText.getString().trim()));
+                            }
+                        } catch (NullPointerException e) {
+                            // Skip shapes with null txtObjectRecord
+                            // This can happen with certain types of shapes in .xls files
                         }
                     }
                 }
             }
         }
 
-        return text.toString();
-    }
-
-    private void appendShapeText(StringBuilder text, String filePath, String sheetName, String shapeText) {
-        if (outputMode == OutputMode.TERMINAL) {
-            // Human-readable format: [Sheet:Shape] Content
-            text.append("[").append(sheetName).append(":Shape] ")
-                .append(shapeText).append("\n");
-        } else {
-            // TSV format: FilePath\tSheet\tShape\tContent
-            text.append(filePath).append("\t")
-                .append(sheetName).append("\t")
-                .append("Shape").append("\t")
-                .append(escapeText(shapeText)).append("\n");
-        }
+        return items;
     }
 }
