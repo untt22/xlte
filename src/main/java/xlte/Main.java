@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;

@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 import java.util.List;
 import java.util.stream.Collectors;

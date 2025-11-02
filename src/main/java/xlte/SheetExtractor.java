@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 import org.apache.poi.hssf.usermodel.HSSFPatriarch;
 import org.apache.poi.hssf.usermodel.HSSFRichTextString;

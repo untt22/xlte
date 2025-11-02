@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 import java.util.function.Consumer;
 import java.util.function.Function;

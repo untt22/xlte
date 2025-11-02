@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 /**
  * Represents a shape (text box, etc.) extracted from an Excel sheet.

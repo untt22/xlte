@@ -208,7 +208,7 @@ try (var fis = new FileInputStream(file);
 ## Code Structure
 
 ```
-src/main/java/dev/untt/xlte/
+src/main/java/xlte/
 ├── Main.java                 - CLI entry point with picocli
 ├── FileProcessor.java        - File I/O layer
 ├── WorkbookExtractor.java    - Workbook processing layer
