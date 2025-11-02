@@ -17,7 +17,7 @@ public interface OutputFormatter {
 
     /**
      * Escapes special characters in text for safe output.
-     * Converts newlines (\r\n, \n, \r) to escaped form (\\n).
+     * Converts newlines (\r\n, \n, \r) to spaces.
      *
      * @param text The text to escape
      * @return The escaped text, or empty string if text is null
@@ -26,8 +26,8 @@ public interface OutputFormatter {
         if (text == null) {
             return "";
         }
-        return text.replace("\r\n", "\\n")
-                   .replace("\n", "\\n")
-                   .replace("\r", "\\n");
+        return text.replace("\r\n", " ")
+                   .replace("\n", " ")
+                   .replace("\r", " ");
     }
 }

@@ -82,7 +82,7 @@ When output goes directly to a terminal, the format is designed for human readab
 **Characteristics:**
 - File headers with separators
 - `[Sheet:Cell]` prefix for easy visual scanning
-- Newlines preserved in their original form
+- Newlines converted to spaces for single-line display
 - Blank line between files
 
 ### TSV Mode (Machine-Readable)
@@ -105,7 +105,7 @@ samples/data.xlsx	Sheet2	C5	AnotherCell
 
 **Characteristics:**
 - Tab-separated columns for easy parsing
-- Newlines escaped as `\n`
+- Newlines converted to spaces for single-line records
 - Compatible with grep, awk, and spreadsheet software
 
 ### Usage Examples
