@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 import java.util.LinkedHashMap;
 import java.util.List;

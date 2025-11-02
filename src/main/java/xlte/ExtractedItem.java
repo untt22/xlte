@@ -1,4 +1,4 @@
-package dev.untt.xlte;
+package xlte;
 
 /**
  * Represents an item extracted from an Excel file.
